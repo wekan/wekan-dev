@@ -16,7 +16,7 @@ services:
       - wekan-db-dump:/dump
 
   wekan:
-    image: mquandalle/wekan:latest
+    image: wekan:dev
     container_name: wekan-app
     restart: always
     networks:
@@ -25,18 +25,18 @@ services:
       context: .
       dockerfile: Dockerfile
       args:
-        - NODE_VERSION=${NODE_VERSION}
-        - METEOR_RELEASE=${METEOR_RELEASE}
-        - NPM_VERSION=${NPM_VERSION}
-        - ARCHITECTURE=${ARCHITECTURE}
-        - SRC_PATH=${SRC_PATH}
+        - NODE_VERSION=v0.10.48
+        - METEOR_RELEASE=1.3.5.1
+        - NPM_VERSION=3.10.10
     ports:
-      - 80:80
+      - 3000:3000
     environment:
       - MONGO_URL=mongodb://wekandb:27017/wekan
       - ROOT_URL=http://localhost
     depends_on:
       - wekandb
+    volumes:
+      - ./src:/home/wekan/app
 
 volumes:
   wekan-db:

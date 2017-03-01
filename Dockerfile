@@ -1,24 +1,17 @@
 FROM debian:wheezy
-MAINTAINER wefork
 
 # Declare Arguments
 ARG NODE_VERSION
 ARG METEOR_RELEASE
 ARG NPM_VERSION
-ARG ARCHITECTURE
-ARG SRC_PATH
 
 # Set the environment variables (defaults where required)
+ENV ARCHITECTURE=linux-x64
 ENV BUILD_DEPS="wget curl bzip2 build-essential python git ca-certificates"
 ENV GOSU_VERSION=1.10
-ENV NODE_VERSION ${NODE_VERSION:-v0.10.48}
-ENV METEOR_RELEASE ${METEOR_RELEASE:-1.3.5.1}
-ENV NPM_VERSION ${NPM_VERSION:-3.10.10}
-ENV ARCHITECTURE ${ARCHITECTURE:-linux-x64}
-ENV SRC_PATH ${SRC_PATH:-./}
-
-# Copy the app to the image
-COPY ${SRC_PATH} /home/wekan/app
+ENV NODE_VERSION ${NODE_VERSION}
+ENV METEOR_RELEASE ${METEOR_RELEASE}
+ENV NPM_VERSION ${NPM_VERSION}
 
 RUN \
     # Add non-root user wekan
@@ -68,32 +61,35 @@ RUN \
     npm install -g fibers && \
     \
     # Change user to wekan and install meteor
+    mkdir -p /home/wekan && \
     cd /home/wekan/ && \
     chown wekan:wekan --recursive /home/wekan && \
     curl https://install.meteor.com -o ./install_meteor.sh && \
     sed -i "s|RELEASE=.*|RELEASE=${METEOR_RELEASE}\"\"|g" ./install_meteor.sh && \
     echo "Starting meteor ${METEOR_RELEASE} installation...   \n" && \
     chown wekan:wekan ./install_meteor.sh && \
-    gosu wekan:wekan sh ./install_meteor.sh && \
-    \
-    # Build app
-    cd /home/wekan/app && \
-    gosu wekan /home/wekan/.meteor/meteor npm install --save xss && \
-    gosu wekan /home/wekan/.meteor/meteor build --directory /home/wekan/app_build && \
-    cd /home/wekan/app_build/bundle/programs/server/ && \
-    gosu wekan npm install && \
-    mv /home/wekan/app_build/bundle /build && \
-    \
-    # Cleanup
-    apt-get remove --purge -y ${BUILD_DEPS} && \
-    apt-get autoremove -y && \
-    rm -R /var/lib/apt/lists/* && \
-    rm -R /home/wekan/.meteor && \
-    rm -R /home/wekan/app && \
-    rm -R /home/wekan/app_build && \
-    rm /home/wekan/install_meteor.sh
+    gosu wekan:wekan sh ./install_meteor.sh
 
-ENV PORT=80
+ENV METEOR_PROFILE=100
+ENV METEOR_LOG=debug
+
+WORKDIR /home/wekan/app
+COPY \
+    src/.meteor/.finished-upgraders \
+    src/.meteor/.id \
+    src/.meteor/cordova-plugins \
+    src/.meteor/packages \
+    src/.meteor/platforms \
+    src/.meteor/release \
+    src/.meteor/versions \
+    .meteor/
+
+RUN \
+    chown wekan:wekan --recursive . && \
+    gosu wekan /home/wekan/.meteor/meteor build --directory /home/wekan/app_build
+
+ENV PORT=3000
 EXPOSE $PORT
 
-CMD ["node", "/build/main.js"]
+USER wekan
+CMD ["/home/wekan/.meteor/meteor", "run", "--verbose"]
