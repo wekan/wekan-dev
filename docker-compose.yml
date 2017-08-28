@@ -2,9 +2,9 @@ version: '2'
 
 services:
 
-  wekandb:
+  wekandb-dev:
     image: mongo:3.2.12
-    container_name: wekan-db
+    container_name: wekan-db-dev
     restart: always
     command: mongod --smallfiles --oplogSize 128
     networks:
@@ -12,12 +12,12 @@ services:
     expose:
       - 27017
     volumes:
-      - wekan-db:/data/db
-      - wekan-db-dump:/dump
+      - wekan-db-dev:/data/db
+      - wekan-db-dump-dev:/dump
 
-  wekan:
+  wekan-dev:
     image: wekan:dev
-    container_name: wekan-app
+    container_name: wekan-app-dev
     restart: always
     networks:
       - wekan-tier
@@ -25,23 +25,23 @@ services:
       context: .
       dockerfile: Dockerfile
       args:
-        - NODE_VERSION=v0.10.48
-        - METEOR_RELEASE=1.3.5.1
-        - NPM_VERSION=3.10.10
+        - NODE_VERSION=v4.8.4
+        - METEOR_RELEASE=1.4.4.1
+        - NPM_VERSION=4.6.1
     ports:
-      - 3000:3000
+      - 8081:3000
     environment:
-      - MONGO_URL=mongodb://wekandb:27017/wekan
-      - ROOT_URL=http://localhost
+      - MONGO_URL=mongodb://wekandb-dev:27017/wekan
+      - ROOT_URL=http://localhost:8081
     depends_on:
-      - wekandb
+      - wekandb-dev
     volumes:
       - ./src:/home/wekan/app
 
 volumes:
-  wekan-db:
+  wekan-db-dev:
     driver: local
-  wekan-db-dump:
+  wekan-db-dump-dev:
     driver: local
 
 networks:
