@@ -1,5 +1,5 @@
 FROM debian:8.9
-MAINTAINER wekan
+LABEL maintainer="wekan"
 
 # Declare Arguments
 ARG NODE_VERSION
@@ -30,7 +30,7 @@ RUN \
     useradd --user-group --system -m wekan && \
     \
     # OS dependencies
-    apt-get update -y && apt-get dist-upgrade -y && apt-get install -y --no-install-recommends ${BUILD_DEPS} && \
+    apt-get update -y && apt-get install -y --no-install-recommends ${BUILD_DEPS} && \
     \
     # Gosu installation
     GOSU_ARCHITECTURE="$(dpkg --print-architecture | awk -F- '{ print $NF }')" && \
