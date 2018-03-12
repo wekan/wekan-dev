@@ -3,7 +3,7 @@ version: '2'
 services:
 
   wekandb-dev:
-    image: mongo:3.2.12
+    image: mongo:3.2.19
     container_name: wekan-db-dev
     restart: always
     command: mongod --smallfiles --oplogSize 128
@@ -24,10 +24,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-      args:
-        - NODE_VERSION=v4.8.4
-        - METEOR_RELEASE=1.4.4.1
-        - NPM_VERSION=4.6.1
     ports:
       - 8081:3000
     environment:
