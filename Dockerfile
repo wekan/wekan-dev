@@ -1,5 +1,5 @@
-FROM debian:8.9
-LABEL maintainer="wekan"
+FROM debian:buster-slim
+MAINTAINER wekan
 
 # Declare Arguments
 ARG NODE_VERSION
@@ -12,35 +12,26 @@ ARG ARCHITECTURE
 ARG SRC_PATH
 
 # Set the environment variables (defaults where required)
-ENV BUILD_DEPS="wget curl bzip2 build-essential python git ca-certificates gcc-4.9"
-ENV GOSU_VERSION=1.10
-ENV NODE_VERSION ${NODE_VERSION:-v4.8.4}
-ENV METEOR_RELEASE ${METEOR_RELEASE:-1.4.4.1}
+# paxctl fix for alpine linux: https://github.com/wekan/wekan/issues/1303
+ENV BUILD_DEPS="apt-utils gnupg gosu wget curl bzip2 build-essential python git ca-certificates gcc-7 paxctl"
+ENV NODE_VERSION ${NODE_VERSION:-v8.9.3}
+ENV METEOR_RELEASE ${METEOR_RELEASE:-1.6.0.1}
 ENV USE_EDGE ${USE_EDGE:-false}
 ENV METEOR_EDGE ${METEOR_EDGE:-1.5-beta.17}
-ENV NPM_VERSION ${NPM_VERSION:-4.6.1}
-ENV FIBERS_VERSION ${FIBERS_VERSION:-1.0.15}
+ENV NPM_VERSION ${NPM_VERSION:-5.5.1}
+ENV FIBERS_VERSION ${FIBERS_VERSION:-2.0.0}
 ENV ARCHITECTURE ${ARCHITECTURE:-linux-x64}
 ENV SRC_PATH ${SRC_PATH:-./}
-ENV METEOR_PROFILE=100
-ENV METEOR_LOG=debug
+
+# Copy the app to the image
+COPY ${SRC_PATH} /home/wekan/app
 
 RUN \
     # Add non-root user wekan
-    useradd --user-group --system -m wekan && \
+    useradd --user-group --system --home-dir /home/wekan wekan && \
     \
     # OS dependencies
     apt-get update -y && apt-get install -y --no-install-recommends ${BUILD_DEPS} && \
-    \
-    # Gosu installation
-    GOSU_ARCHITECTURE="$(dpkg --print-architecture | awk -F- '{ print $NF }')" && \
-    wget -O /usr/local/bin/gosu "https://github.com/tianon/gosu/releases/download/${GOSU_VERSION}/gosu-${GOSU_ARCHITECTURE}" && \
-    wget -O /usr/local/bin/gosu.asc "https://github.com/tianon/gosu/releases/download/${GOSU_VERSION}/gosu-${GOSU_ARCHITECTURE}.asc" && \
-    export GNUPGHOME="$(mktemp -d)" && \
-    gpg --keyserver ha.pool.sks-keyservers.net --recv-keys B42F6819007F00F88E364FD4036A9C25BF357DD4 && \
-    gpg --batch --verify /usr/local/bin/gosu.asc /usr/local/bin/gosu && \
-    rm -R "$GNUPGHOME" /usr/local/bin/gosu.asc && \
-    chmod +x /usr/local/bin/gosu && \
     \
     # Download nodejs
     wget https://nodejs.org/dist/${NODE_VERSION}/node-${NODE_VERSION}-${ARCHITECTURE}.tar.gz && \
@@ -49,7 +40,7 @@ RUN \
     # Verify nodejs authenticity
     grep ${NODE_VERSION}-${ARCHITECTURE}.tar.gz SHASUMS256.txt.asc | shasum -a 256 -c - && \
     export GNUPGHOME="$(mktemp -d)" && \
-
+    \
     # Try other key servers if ha.pool.sks-keyservers.net is unreachable
     # Code from https://github.com/chorrell/docker-node/commit/2b673e17547c34f17f24553db02beefbac98d23c
     # gpg keys listed at https://github.com/nodejs/node#release-team
@@ -68,7 +59,10 @@ RUN \
     gpg --keyserver keyserver.pgp.com --recv-keys "$key" ; \
     done && \
     gpg --verify SHASUMS256.txt.asc && \
-    rm -R "$GNUPGHOME" SHASUMS256.txt.asc && \
+    # Ignore socket files then delete files then delete directories
+    find "$GNUPGHOME" -type f | xargs rm -f && \
+    find "$GNUPGHOME" -type d | xargs rm -fR && \
+    rm -f SHASUMS256.txt.asc && \
     \
     # Install Node
     tar xvzf node-${NODE_VERSION}-${ARCHITECTURE}.tar.gz && \
@@ -76,6 +70,9 @@ RUN \
     mv node-${NODE_VERSION}-${ARCHITECTURE} /opt/nodejs && \
     ln -s /opt/nodejs/bin/node /usr/bin/node && \
     ln -s /opt/nodejs/bin/npm /usr/bin/npm && \
+    \
+    # paxctl fix for alpine linux: https://github.com/wekan/wekan/issues/1303
+    paxctl -mC `which node` && \
     \
     # Install Node dependencies
     npm install -g npm@${NPM_VERSION} && \
@@ -85,14 +82,14 @@ RUN \
     # Change user to wekan and install meteor
     cd /home/wekan/ && \
     chown wekan:wekan --recursive /home/wekan && \
-    curl https://install.meteor.com -o ./install_meteor.sh && \
+    curl https://install.meteor.com -o /home/wekan/install_meteor.sh && \
     sed -i "s|RELEASE=.*|RELEASE=${METEOR_RELEASE}\"\"|g" ./install_meteor.sh && \
     echo "Starting meteor ${METEOR_RELEASE} installation...   \n" && \
-    chown wekan:wekan ./install_meteor.sh && \
+    chown wekan:wekan /home/wekan/install_meteor.sh && \
     \
     # Check if opting for a release candidate instead of major release
     if [ "$USE_EDGE" = false ]; then \
-      gosu wekan:wekan sh ./install_meteor.sh; \
+      gosu wekan:wekan sh /home/wekan/install_meteor.sh; \
     else \
       gosu wekan:wekan git clone --recursive --depth 1 -b release/METEOR@${METEOR_EDGE} git://github.com/meteor/meteor.git /home/wekan/.meteor; \
     fi; \
@@ -119,18 +116,13 @@ COPY \
     .meteor/
 
 RUN \
-    groupmod -g 1000 wekan && \
-    usermod -u 1000 wekan && \
-    usermod -g 1000 wekan && \
     chown -R wekan:wekan /home/wekan && \
     chmod g+s /home/wekan && \
-    gosu wekan /home/wekan/.meteor/meteor build --directory /home/wekan/app_build
-
-ENV PORT=3000
-EXPOSE $PORT
-
-RUN \
+    gosu wekan /home/wekan/.meteor/meteor build --directory /home/wekan/app_build && \
     chown wekan:wekan --recursive .meteor
+
+ENV PORT=80
+EXPOSE $PORT
 
 USER wekan
 CMD ["/home/wekan/.meteor/meteor", "run", "--verbose"]
