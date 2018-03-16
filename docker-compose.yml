@@ -24,6 +24,9 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        - WEKAN_UID=${WEKAN_UID}
+        - WEKAN_GID=${WEKAN_GID}
     ports:
       - 8081:3000
     environment:

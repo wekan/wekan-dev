@@ -8,11 +8,10 @@ To get started, you'll need [Docker](https://www.docker.com/products/docker) set
 Then:
 
 ```
-git clone https://github.com/wekan/wekan-dev.git wekan
-cd wekan
+git clone https://github.com/wekan/wekan-dev.git wekan-dev
+cd wekan-dev
 git submodule update --init --remote
-(cd src; npm install)
-docker-compose up --build -d
+./run.sh
 ```
 
 This will take some time to build the image, and to initially cache & build the meteor packages.

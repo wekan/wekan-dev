@@ -10,6 +10,8 @@ ARG NPM_VERSION
 ARG FIBERS_VERSION
 ARG ARCHITECTURE
 ARG SRC_PATH
+ARG WEKAN_UID
+ARG WEKAN_GID
 
 # Set the environment variables (defaults where required)
 # paxctl fix for alpine linux: https://github.com/wekan/wekan/issues/1303
@@ -23,12 +25,11 @@ ENV FIBERS_VERSION ${FIBERS_VERSION:-2.0.0}
 ENV ARCHITECTURE ${ARCHITECTURE:-linux-x64}
 ENV SRC_PATH ${SRC_PATH:-./}
 
-# Copy the app to the image
-COPY ${SRC_PATH} /home/wekan/app
-
 RUN \
     # Add non-root user wekan
-    useradd --user-group --system --home-dir /home/wekan wekan && \
+    groupadd -g ${WEKAN_GID} wekan && \
+    useradd --system -m -u ${WEKAN_UID} -g ${WEKAN_GID} wekan && \
+    mkdir -p /home/wekan/app/.meteor && \
     \
     # OS dependencies
     apt-get update -y && apt-get install -y --no-install-recommends ${BUILD_DEPS} && \
@@ -77,34 +78,8 @@ RUN \
     # Install Node dependencies
     npm install -g npm@${NPM_VERSION} && \
     npm install -g node-gyp && \
-    npm install -g fibers@${FIBERS_VERSION} && \
-    \
-    # Change user to wekan and install meteor
-    cd /home/wekan/ && \
-    chown wekan:wekan --recursive /home/wekan && \
-    curl https://install.meteor.com -o /home/wekan/install_meteor.sh && \
-    sed -i "s|RELEASE=.*|RELEASE=${METEOR_RELEASE}\"\"|g" ./install_meteor.sh && \
-    echo "Starting meteor ${METEOR_RELEASE} installation...   \n" && \
-    chown wekan:wekan /home/wekan/install_meteor.sh && \
-    \
-    # Check if opting for a release candidate instead of major release
-    if [ "$USE_EDGE" = false ]; then \
-      gosu wekan:wekan sh /home/wekan/install_meteor.sh; \
-    else \
-      gosu wekan:wekan git clone --recursive --depth 1 -b release/METEOR@${METEOR_EDGE} git://github.com/meteor/meteor.git /home/wekan/.meteor; \
-    fi; \
-    \
-    # Get additional packages
-    mkdir -p /home/wekan/app/packages && \
-    chown wekan:wekan --recursive /home/wekan && \
-    cd /home/wekan/app/packages && \
-    gosu wekan:wekan git clone --depth 1 -b master git://github.com/wekan/flow-router.git kadira-flow-router && \
-    gosu wekan:wekan git clone --depth 1 -b master git://github.com/meteor-useraccounts/core.git meteor-useraccounts-core && \
-    sed -i 's/api\.versionsFrom/\/\/api.versionsFrom/' /home/wekan/app/packages/meteor-useraccounts-core/package.js && \
-    cd /home/wekan/.meteor && \
-    gosu wekan:wekan /home/wekan/.meteor/meteor -- help;
+    npm install -g fibers@${FIBERS_VERSION}
 
-WORKDIR /home/wekan/app
 COPY \
     src/.meteor/.finished-upgraders \
     src/.meteor/.id \
@@ -113,16 +88,38 @@ COPY \
     src/.meteor/platforms \
     src/.meteor/release \
     src/.meteor/versions \
-    .meteor/
+    /home/wekan/app/.meteor/
 
-RUN \
-    chown -R wekan:wekan /home/wekan && \
-    chmod g+s /home/wekan && \
-    gosu wekan /home/wekan/.meteor/meteor build --directory /home/wekan/app_build && \
-    chown wekan:wekan --recursive .meteor
-
-ENV PORT=80
-EXPOSE $PORT
+RUN chown -R wekan:wekan /home/wekan
 
 USER wekan
+
+RUN \
+    cd /home/wekan/ && \
+    curl https://install.meteor.com -o /home/wekan/install_meteor.sh && \
+    sed -i "s|RELEASE=.*|RELEASE=${METEOR_RELEASE}\"\"|g" /home/wekan/install_meteor.sh && \
+    echo "Starting meteor ${METEOR_RELEASE} installation...   \n" && \
+    \
+    # Check if opting for a release candidate instead of major release
+    if [ "$USE_EDGE" = false ]; then \
+      /bin/bash /home/wekan/install_meteor.sh; \
+    else \
+      clone --recursive --depth 1 -b release/METEOR@${METEOR_EDGE} git://github.com/meteor/meteor.git /home/wekan/.meteor; \
+    fi; \
+    \
+    # Get additional packages
+    mkdir -p /home/wekan/app/packages && \
+    cd /home/wekan/app/packages && \
+    git clone --depth 1 -b master git://github.com/wekan/flow-router.git kadira-flow-router && \
+    git clone --depth 1 -b master git://github.com/meteor-useraccounts/core.git meteor-useraccounts-core && \
+    sed -i 's/api\.versionsFrom/\/\/api.versionsFrom/' /home/wekan/app/packages/meteor-useraccounts-core/package.js && \
+    cd /home/wekan/.meteor && \
+    /home/wekan/.meteor/meteor -- help;
+
+WORKDIR /home/wekan/app
+RUN /home/wekan/.meteor/meteor build --directory /home/wekan/app_build
+
+ENV PORT=3000
+EXPOSE $PORT
+
 CMD ["/home/wekan/.meteor/meteor", "run", "--verbose"]
