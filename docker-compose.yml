@@ -32,6 +32,9 @@ services:
     environment:
       - MONGO_URL=mongodb://wekandb-dev:27017/wekan
       - ROOT_URL=http://localhost:8081
+      - WITH_API=true
+      - BROWSER_POLICY_ENABLED=true
+      - TRUSTED_URL=''
     depends_on:
       - wekandb-dev
     volumes:
