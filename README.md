@@ -16,7 +16,7 @@ docker-compose up --build -d
 ```
 
 This will take some time to build the image, and to initially cache & build the meteor packages.
-Eventually you should be able to see Wekan at `http://localhost:8081/`, and changes made under
+Eventually you should be able to see Wekan at [`http://localhost:8081/`](http://localhost:8081/), and changes made under
 `src/` will automatically trigger a refresh of the interface. Note that the `src/` directory also
 includes docker configuration; those are for the production builds of Wekan.
 
