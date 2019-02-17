@@ -24,11 +24,17 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        - WEKAN_UID=${WEKAN_UID}
+        - WEKAN_GID=${WEKAN_GID}
     ports:
       - 8081:3000
     environment:
       - MONGO_URL=mongodb://wekandb-dev:27017/wekan
       - ROOT_URL=http://localhost:8081
+      - WITH_API=true
+      - BROWSER_POLICY_ENABLED=true
+      - TRUSTED_URL=''
     depends_on:
       - wekandb-dev
     volumes:
