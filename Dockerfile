@@ -269,4 +269,4 @@ EXPOSE $PORT
 USER wekan
 WORKDIR /home/wekan/app
 
-CMD ["/home/wekan/.meteor/meteor", "run", "--verbose"]
+CMD ["/home/wekan/.meteor/meteor", "run", "--verbose", "--settings", "settings.json"]
