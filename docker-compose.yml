@@ -38,7 +38,11 @@ services:
     depends_on:
       - wekandb-dev
     volumes:
-      - ./src:/home/wekan/app
+      - ./src/client:/home/wekan/app/client
+      - ./src/models:/home/wekan/app/models
+      - ./src/config:/home/wekan/app/config
+      - ./src/i18n:/home/wekan/app/i18n
+      - ./src/server:/home/wekan/app/server
 
 volumes:
   wekan-db-dev:

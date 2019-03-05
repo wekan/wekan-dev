@@ -12,6 +12,7 @@ ARG FIBERS_VERSION
 ARG ARCHITECTURE
 ARG SRC_PATH
 ARG WITH_API
+ARG EMAIL_NOTIFICATION_TIMEOUT
 ARG MATOMO_ADDRESS
 ARG MATOMO_SITE_ID
 ARG MATOMO_DO_NOT_TRACK
@@ -30,8 +31,6 @@ ARG OAUTH2_ID_MAP
 ARG OAUTH2_USERNAME_MAP
 ARG OAUTH2_FULLNAME_MAP
 ARG OAUTH2_EMAIL_MAP
-ARG OAUTH2_ID_TOKEN_WHITELIST_FIELDS
-ARG OAUTH2_REQUEST_PERMISSIONS
 ARG LDAP_ENABLE
 ARG LDAP_PORT
 ARG LDAP_HOST
@@ -67,6 +66,10 @@ ARG LDAP_UNIQUE_IDENTIFIER_FIELD
 ARG LDAP_UTF8_NAMES_SLUGIFY
 ARG LDAP_USERNAME_FIELD
 ARG LDAP_FULLNAME_FIELD
+ARG LDAP_EMAIL_FIELD
+ARG LDAP_EMAIL_MATCH_ENABLE
+ARG LDAP_EMAIL_MATCH_REQUIRE
+ARG LDAP_EMAIL_MATCH_VERIFIED
 ARG LDAP_MERGE_EXISTING_USERS
 ARG LDAP_SYNC_USER_DATA
 ARG LDAP_SYNC_USER_DATA_FIELDMAP
@@ -86,7 +89,7 @@ ARG WEKAN_GID
 # ENV BUILD_DEPS="paxctl"
 ENV BUILD_DEPS="apt-utils bsdtar gnupg gosu wget curl bzip2 build-essential python python3 python3-distutils git ca-certificates gcc-7" \
     DEBUG=false \
-    NODE_VERSION=v8.15.0 \
+    NODE_VERSION=v8.15.1 \
     METEOR_RELEASE=1.6.0.1 \
     USE_EDGE=false \
     METEOR_EDGE=1.5-beta.17 \
@@ -95,6 +98,7 @@ ENV BUILD_DEPS="apt-utils bsdtar gnupg gosu wget curl bzip2 build-essential pyth
     ARCHITECTURE=linux-x64 \
     SRC_PATH=./src/ \
     WITH_API=true \
+    EMAIL_NOTIFICATION_TIMEOUT=30000 \
     MATOMO_ADDRESS="" \
     MATOMO_SITE_ID="" \
     MATOMO_DO_NOT_TRACK=true \
@@ -113,8 +117,6 @@ ENV BUILD_DEPS="apt-utils bsdtar gnupg gosu wget curl bzip2 build-essential pyth
     OAUTH2_USERNAME_MAP="" \
     OAUTH2_FULLNAME_MAP="" \
     OAUTH2_EMAIL_MAP="" \
-    OAUTH2_ID_TOKEN_WHITELIST_FIELDS=[] \
-    OAUTH2_REQUEST_PERMISSIONS=[openid] \
     LDAP_ENABLE=false \
     LDAP_PORT=389 \
     LDAP_HOST="" \
@@ -151,6 +153,10 @@ ENV BUILD_DEPS="apt-utils bsdtar gnupg gosu wget curl bzip2 build-essential pyth
     LDAP_USERNAME_FIELD="" \
     LDAP_FULLNAME_FIELD="" \
     LDAP_MERGE_EXISTING_USERS=false \
+    LDAP_EMAIL_FIELD="" \
+    LDAP_EMAIL_MATCH_ENABLE=false \
+    LDAP_EMAIL_MATCH_REQUIRE=false \
+    LDAP_EMAIL_MATCH_VERIFIED=false \
     LDAP_SYNC_USER_DATA=false \
     LDAP_SYNC_USER_DATA_FIELDMAP="" \
     LDAP_SYNC_GROUP_ROLES="" \
@@ -212,7 +218,8 @@ COPY \
 
 COPY \
     src/package.json \
-    /home/wekan/app/package.json
+    src/settings.json \
+    /home/wekan/app/
 
 RUN \
     # Change user to wekan and install meteor
@@ -240,6 +247,10 @@ RUN \
     gosu wekan:wekan git clone --depth 1 -b master git://github.com/wekan/meteor-accounts-cas.git && \
     gosu wekan:wekan git clone --depth 1 -b master git://github.com/wekan/wekan-ldap.git && \
     gosu wekan:wekan git clone --depth 1 -b master git://github.com/wekan/wekan-scrollbar.git && \
+    gosu wekan:wekan git clone --depth 1 -b master git://github.com/wekan/meteor-accounts-oidc.git && \
+    gosu wekan:wekan mv meteor-accounts-oidc/packages/switch_accounts-oidc wekan_accounts-oidc && \
+    gosu wekan:wekan mv meteor-accounts-oidc/packages/switch_oidc wekan_oidc && \
+    gosu wekan:wekan rm -rf meteor-accounts-oidc && \
     sed -i 's/api\.versionsFrom/\/\/api.versionsFrom/' /home/wekan/app/packages/meteor-useraccounts-core/package.js && \
     cd /home/wekan/.meteor && \
     gosu wekan:wekan /home/wekan/.meteor/meteor -- help;
