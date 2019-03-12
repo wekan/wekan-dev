@@ -1,4 +1,4 @@
-FROM debian:buster-slim
+FROM ubuntu:cosmic
 LABEL maintainer="wekan"
 
 # Declare Arguments
@@ -12,6 +12,12 @@ ARG FIBERS_VERSION
 ARG ARCHITECTURE
 ARG SRC_PATH
 ARG WITH_API
+ARG ACCOUNTS_LOCKOUT_KNOWN_USERS_FAILURES_BEFORE
+ARG ACCOUNTS_LOCKOUT_KNOWN_USERS_PERIOD
+ARG ACCOUNTS_LOCKOUT_KNOWN_USERS_FAILURE_WINDOW
+ARG ACCOUNTS_LOCKOUT_UNKNOWN_USERS_FAILURES_BERORE
+ARG ACCOUNTS_LOCKOUT_UNKNOWN_USERS_LOCKOUT_PERIOD
+ARG ACCOUNTS_LOCKOUT_UNKNOWN_USERS_FAILURE_WINDOW
 ARG EMAIL_NOTIFICATION_TIMEOUT
 ARG MATOMO_ADDRESS
 ARG MATOMO_SITE_ID
@@ -75,6 +81,12 @@ ARG LDAP_SYNC_USER_DATA
 ARG LDAP_SYNC_USER_DATA_FIELDMAP
 ARG LDAP_SYNC_GROUP_ROLES
 ARG LDAP_DEFAULT_DOMAIN
+ARG LDAP_SYNC_ADMIN_STATUS
+ARG LDAP_SYNC_ADMIN_GROUPS
+ARG HEADER_LOGIN_ID
+ARG HEADER_LOGIN_FIRSTNAME
+ARG HEADER_LOGIN_LASTNAME
+ARG HEADER_LOGIN_EMAIL
 ARG LOGOUT_WITH_TIMER
 ARG LOGOUT_IN
 ARG LOGOUT_ON_HOURS
@@ -98,6 +110,12 @@ ENV BUILD_DEPS="apt-utils bsdtar gnupg gosu wget curl bzip2 build-essential pyth
     ARCHITECTURE=linux-x64 \
     SRC_PATH=./src/ \
     WITH_API=true \
+    ACCOUNTS_LOCKOUT_KNOWN_USERS_FAILURES_BEFORE=3 \
+    ACCOUNTS_LOCKOUT_KNOWN_USERS_PERIOD=60 \
+    ACCOUNTS_LOCKOUT_KNOWN_USERS_FAILURE_WINDOW=15 \
+    ACCOUNTS_LOCKOUT_UNKNOWN_USERS_FAILURES_BERORE=3 \
+    ACCOUNTS_LOCKOUT_UNKNOWN_USERS_LOCKOUT_PERIOD=60 \
+    ACCOUNTS_LOCKOUT_UNKNOWN_USERS_FAILURE_WINDOW=15 \
     EMAIL_NOTIFICATION_TIMEOUT=30000 \
     MATOMO_ADDRESS="" \
     MATOMO_SITE_ID="" \
@@ -161,6 +179,12 @@ ENV BUILD_DEPS="apt-utils bsdtar gnupg gosu wget curl bzip2 build-essential pyth
     LDAP_SYNC_USER_DATA_FIELDMAP="" \
     LDAP_SYNC_GROUP_ROLES="" \
     LDAP_DEFAULT_DOMAIN="" \
+    LDAP_SYNC_ADMIN_STATUS="" \
+    LDAP_SYNC_ADMIN_GROUPS="" \
+    HEADER_LOGIN_ID="" \
+    HEADER_LOGIN_FIRSTNAME="" \
+    HEADER_LOGIN_LASTNAME="" \
+    HEADER_LOGIN_EMAIL="" \
     LOGOUT_WITH_TIMER=false \
     LOGOUT_IN="" \
     LOGOUT_ON_HOURS="" \
@@ -263,6 +287,7 @@ RUN \
     gosu wekan:wekan /home/wekan/.meteor/meteor npm install && \
     gosu wekan:wekan /home/wekan/.meteor/meteor build --directory /home/wekan/app_build && \
     cp /home/wekan/app/fix-download-unicode/cfs_access-point.txt /home/wekan/app_build/bundle/programs/server/packages/cfs_access-point.js && \
+    rm /home/wekan/app_build/bundle/programs/server/npm/node_modules/meteor/rajit_bootstrap3-datepicker/lib/bootstrap-datepicker/node_modules/phantomjs-prebuilt/lib/phantom/bin/phantomjs && \
     chown wekan:wekan /home/wekan/app_build/bundle/programs/server/packages/cfs_access-point.js && \
     cd /home/wekan/app_build/bundle/programs/server/ && \
     gosu wekan:wekan npm install && \
