@@ -11,6 +11,7 @@ Then:
 git clone https://github.com/wekan/wekan-dev.git wekan-dev
 cd wekan-dev
 git submodule update --init --remote
+./build.sh
 ./run.sh
 ```
 
