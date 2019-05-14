@@ -199,11 +199,13 @@ RUN \
     # Add non-root user wekan
     groupadd -g ${WEKAN_GID} wekan && \
     useradd --system -m -u ${WEKAN_UID} -g ${WEKAN_GID} wekan && \
-    mkdir -p /home/wekan/app/.meteor && \
     \
     # OS dependencies
     apt-get update -y && apt-get install -y --no-install-recommends ${BUILD_DEPS} && \
     pip3 install -U pip setuptools wheel && \
+    \
+    gosu wekan:wekan mkdir -p /home/wekan/app/.meteor && \
+    gosu wekan:wekan mkdir -p /home/wekan/app/packages && \
     \
     # Meteor installer doesn't work with the default tar binary, so using bsdtar while installing.
     # https://github.com/coreos/bugs/issues/1095#issuecomment-350574389
@@ -286,6 +288,10 @@ COPY \
     src/package.json \
     src/settings.json \
     /home/wekan/app/
+
+COPY \
+    src/packages \
+    /home/wekan/app/packages/
 
 RUN \
     # Change user to wekan and install meteor
