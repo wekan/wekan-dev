@@ -294,6 +294,7 @@ COPY \
     /home/wekan/app/packages/
 
 RUN \
+    set -o xtrace && \
     # Change user to wekan and install meteor
     cd /home/wekan/ && \
     chown wekan:wekan --recursive /home/wekan && \
@@ -313,6 +314,7 @@ RUN \
     fi;
 
 RUN \
+    set -o xtrace && \
     # Get additional packages
     #mkdir -p /home/wekan/app/packages && \
     #chown wekan:wekan --recursive /home/wekan && \
@@ -334,6 +336,7 @@ RUN \
     # We dont need openapi
 
 RUN \
+    set -o xtrace && \
     # Build app
     cd /home/wekan/app && \
     gosu wekan:wekan /home/wekan/.meteor/meteor add standard-minifier-js && \
