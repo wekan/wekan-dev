@@ -1,0 +1,50 @@
+# Makefile available for systems with podman and buildah installed.
+#
+# Note: podman needs to be run as root to be able to expose the
+# network ports, thus the `sudo` sprinkled everywhere
+#
+# this is an alternative to the docker-compose.yml file
+
+build:
+	sudo BUILDAH_LAYERS=false  podman build --build-arg WEKAN_UID="$$(id -u)" \
+						--build-arg WEKAN_GID="$$(id -g)" \
+						-t wekan-dev \
+						$(CURDIR)
+
+down:
+	sudo podman pod rm -f wekan-pod
+
+logs-db:
+	sudo podman logs wekandb-dev
+
+logs:
+	sudo podman logs wekan-dev
+
+ps:
+	sudo podman ps -pa
+
+prune:
+	sudo podman volume rm -f mongo-data
+
+up:
+	sudo podman pod create --name wekan-pod -p 3000:3000
+	sudo podman run --name wekandb-dev --pod wekan-pod -dt \
+		-v $(CURDIR)/wekan-db-dev:/data/db:z \
+		-v $(CURDIR)/wekan-db-dump-dev:/dump:z \
+		mongo:3.2.20
+	sudo podman run --name wekan-dev --pod wekan-pod -dt \
+		-e MONGO_URL=mongodb://localhost:27017/wekan \
+		-e PORT=3000 \
+		-e WITH_API=true \
+		-e ROOT_URL=http://localhost:3000 \
+		-v $(CURDIR)/src:/home/wekan/app:Z \
+		wekan-dev
+
+shell:
+	sudo podman exec -it wekan-dev bash
+
+start:
+	sudo podman pod start wekan-pod
+
+stop:
+	sudo podman pod stop wekan-pod
